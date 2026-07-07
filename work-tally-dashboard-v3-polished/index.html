@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Work Tally Dashboard</title>
+<style>
+  :root{--bg:#f4f7fb;--card:#ffffff;--ink:#172033;--muted:#64748b;--line:#dbe3ef;--blue:#0067b1;--blue2:#e8f3ff;--green:#0f9f6e;--red:#d92d20;--yellow:#b7791f;--shadow:0 10px 30px rgba(15,23,42,.08);}
+  *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(135deg,#003b70,#0072bc);color:white;padding:22px 28px;box-shadow:var(--shadow)}
+  header h1{margin:0;font-size:26px} header p{margin:6px 0 0;opacity:.9}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.tab{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}.tab.active{background:var(--blue);color:white;border-color:var(--blue)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+  .metric h3{margin:0 0 4px;color:var(--muted);font-size:14px}.metric .num{font-size:38px;font-weight:800}.metric small{color:var(--muted)}
+  button{border:0;border-radius:12px;padding:10px 13px;font-weight:800;cursor:pointer;background:var(--blue);color:white}button.secondary{background:#e2e8f0;color:#172033}button.danger{background:var(--red)}button.green{background:var(--green)}button.warn{background:#f59e0b;color:#111827}
+  input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px}textarea{min-height:70px}.row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:10px;vertical-align:top}th{color:var(--muted);font-size:12px;text-transform:uppercase}.hidden{display:none}.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800}.vsc{background:#e8f3ff;color:#005b99}.onsite{background:#ecfdf3;color:#067647}.overdue{background:#fee4e2;color:#b42318}.today{background:#fef0c7;color:#93370d}.upcoming{background:#e0f2fe;color:#026aa2}.done{text-decoration:line-through;color:var(--muted)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}.progress{height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden}.bar{height:100%;background:var(--green);width:0}.muted{color:var(--muted)}
+  @media(max-width:850px){.grid,.grid2,.row,.row3{grid-template-columns:1fr}.wrap{padding:14px}header{padding:18px}}
+</style>
+</head>
+<body>
+<header><h1>Work Tally Dashboard</h1><p>VSC jobs, ONSITE jobs, transfers, job numbers, callbacks, and reports.</p></header>
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="showTab('jobs')">Jobs</button>
+    <button class="tab" onclick="showTab('callbacks')">Callbacks</button>
+    <button class="tab" onclick="showTab('reports')">Reports</button>
+    <button class="tab" onclick="showTab('settings')">Settings</button>
+  </div>
+
+  <section id="dashboard" class="panel">
+    <div class="grid">
+      <div class="card metric"><h3>VSC Jobs</h3><div class="num" id="vscCount">0</div><small>Virtual jobs</small></div>
+      <div class="card metric"><h3>ONSITE Jobs</h3><div class="num" id="onsiteCount">0</div><small>Technician scheduled</small></div>
+      <div class="card metric"><h3>Transfers</h3><div class="num" id="transferCount">0</div><small>Today</small></div>
+      <div class="card metric"><h3>Total Jobs</h3><div class="num" id="totalJobs">0</div><small>VSC + ONSITE</small></div>
+    </div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="card"><h2>Quick Add</h2><div class="row3"><button onclick="quickJob('VSC')">+ VSC</button><button class="green" onclick="quickJob('ONSITE')">+ ONSITE</button><button class="secondary" onclick="addTransfer()">+ Transfer</button></div><p class="muted">Use the Jobs tab when you need to enter a job number.</p></div>
+      <div class="card"><h2>Today’s Goal</h2><div id="goalText" class="muted"></div><div class="progress"><div id="goalBar" class="bar"></div></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>Callbacks Due / Overdue</h2><div id="callbackAlerts"></div></div>
+  </section>
+
+  <section id="jobs" class="panel hidden">
+    <div class="card"><h2>Add Job</h2><div class="row"><select id="jobType"><option>VSC</option><option>ONSITE</option></select><input id="jobNumber" placeholder="Job number"/><input id="jobCustomer" placeholder="Customer name optional"/><input id="jobNotes" placeholder="Notes optional"/></div><button onclick="addJob()">Save Job</button></div>
+    <div class="card" style="margin-top:16px"><h2>Job Log</h2><input id="jobSearch" placeholder="Search job number, customer, notes..." oninput="render()" style="margin-bottom:10px"/><div id="jobTable"></div></div>
+  </section>
+
+  <section id="callbacks" class="panel hidden">
+    <div class="card"><h2>Add Callback</h2><div class="row"><input id="cbName" placeholder="Customer name"/><input id="cbPhone" placeholder="Phone number"/><input id="cbDate" type="date"/><input id="cbTime" type="time"/></div><div class="row3"><input id="cbReason" placeholder="Reason"/><input id="cbNotes" placeholder="Notes"/><button onclick="addCallback()">Save Callback</button></div></div>
+    <div class="card" style="margin-top:16px"><h2>Callback Queue</h2><input id="cbSearch" placeholder="Search name, phone, reason..." oninput="render()" style="margin-bottom:10px"/><div id="callbackTable"></div></div>
+  </section>
+
+  <section id="reports" class="panel hidden">
+    <div class="card"><h2>Reports</h2><div class="actions"><button onclick="exportCSV()">Export CSV</button><button class="secondary" onclick="copySummary()">Copy Today’s Summary</button><button class="danger" onclick="resetToday()">Reset Today</button></div><pre id="reportBox" style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px"></pre></div>
+  </section>
+
+  <section id="settings" class="panel hidden">
+    <div class="card"><h2>Daily Goals</h2><div class="row3"><input id="goalVsc" type="number" min="0" placeholder="VSC goal"/><input id="goalOnsite" type="number" min="0" placeholder="ONSITE goal"/><input id="goalTransfers" type="number" min="0" placeholder="Transfer goal"/></div><button onclick="saveGoals()">Save Goals</button></div>
+  </section>
+</div>
+<script>
+const today=()=>new Date().toISOString().slice(0,10);
+const nowTime=()=>new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+let data=JSON.parse(localStorage.getItem('workDashV3')||'{}');
+data.jobs=data.jobs||[];data.callbacks=data.callbacks||[];data.transfers=data.transfers||[];data.goals=data.goals||{vsc:10,onsite:5,transfers:10};
+function save(){localStorage.setItem('workDashV3',JSON.stringify(data));render()}
+function showTab(id){document.querySelectorAll('.panel').forEach(p=>p.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');render()}
+function todaysJobs(){return data.jobs.filter(j=>j.date===today())} function todaysTransfers(){return data.transfers.filter(t=>t.date===today())}
+function quickJob(type){data.jobs.push({id:Date.now(),date:today(),time:nowTime(),type,number:'',customer:'',notes:''});save()}
+function addJob(){let number=jobNumber.value.trim();data.jobs.push({id:Date.now(),date:today(),time:nowTime(),type:jobType.value,number,customer:jobCustomer.value.trim(),notes:jobNotes.value.trim()});jobNumber.value=jobCustomer.value=jobNotes.value='';save()}
+function addTransfer(){data.transfers.push({id:Date.now(),date:today(),time:nowTime()});save()}
+function addCallback(){if(!cbPhone.value.trim()&&!cbName.value.trim()){alert('Add at least a name or phone number.');return}data.callbacks.push({id:Date.now(),name:cbName.value.trim(),phone:cbPhone.value.trim(),date:cbDate.value,time:cbTime.value,reason:cbReason.value.trim(),notes:cbNotes.value.trim(),done:false,created:today()});cbName.value=cbPhone.value=cbDate.value=cbTime.value=cbReason.value=cbNotes.value='';save()}
+function status(cb){if(cb.done)return '<span class="pill upcoming">Completed</span>';let due=new Date((cb.date||today())+'T'+(cb.time||'23:59'));let n=new Date();if(due<n)return '<span class="pill overdue">Overdue</span>';if((cb.date||'')===today())return '<span class="pill today">Due Today</span>';return '<span class="pill upcoming">Upcoming</span>'}
+function render(){let tj=todaysJobs(),v=tj.filter(j=>j.type==='VSC').length,o=tj.filter(j=>j.type==='ONSITE').length,tr=todaysTransfers().length;vscCount.textContent=v;onsiteCount.textContent=o;transferCount.textContent=tr;totalJobs.textContent=v+o;let goalTotal=(+data.goals.vsc)+(+data.goals.onsite);let pct=goalTotal?Math.min(100,Math.round((v+o)/goalTotal*100)):0;goalText.textContent=`${v+o} of ${goalTotal} total job goal (${pct}%)`;goalBar.style.width=pct+'%';
+ let js=(jobSearch?.value||'').toLowerCase();let jobs=[...data.jobs].reverse().filter(j=>(j.number+j.customer+j.notes+j.type+j.date).toLowerCase().includes(js));jobTable.innerHTML='<table><tr><th>Date</th><th>Time</th><th>Type</th><th>Job #</th><th>Customer</th><th>Notes</th><th></th></tr>'+jobs.map(j=>`<tr><td>${j.date}</td><td>${j.time}</td><td><span class="pill ${j.type==='VSC'?'vsc':'onsite'}">${j.type}</span></td><td>${j.number||'-'}</td><td>${j.customer||'-'}</td><td>${j.notes||'-'}</td><td><button class="danger" onclick="delJob(${j.id})">Delete</button></td></tr>`).join('')+'</table>';
+ let cs=(cbSearch?.value||'').toLowerCase();let cbs=[...data.callbacks].sort((a,b)=>(a.done-b.done)||((a.date+a.time).localeCompare(b.date+b.time))).filter(c=>(c.name+c.phone+c.reason+c.notes+c.date).toLowerCase().includes(cs));callbackTable.innerHTML='<table><tr><th>Status</th><th>Date</th><th>Time</th><th>Name</th><th>Phone</th><th>Reason</th><th>Notes</th><th></th></tr>'+cbs.map(c=>`<tr class="${c.done?'done':''}"><td>${status(c)}</td><td>${c.date||'-'}</td><td>${c.time||'-'}</td><td>${c.name||'-'}</td><td>${c.phone||'-'}</td><td>${c.reason||'-'}</td><td>${c.notes||'-'}</td><td><button class="green" onclick="toggleCb(${c.id})">${c.done?'Undo':'Done'}</button> <button class="danger" onclick="delCb(${c.id})">Delete</button></td></tr>`).join('')+'</table>';
+ let alerts=data.callbacks.filter(c=>!c.done&&(c.date<=today()||!c.date));callbackAlerts.innerHTML=alerts.length?alerts.map(c=>`<p>${status(c)} <b>${c.name||c.phone}</b> ${c.phone||''} — ${c.date||'No date'} ${c.time||''} ${c.reason||''}</p>`).join(''):'<p class="muted">No callbacks due right now.</p>';
+ reportBox.textContent=`Today: ${today()}\nVSC Jobs: ${v}\nONSITE Jobs: ${o}\nTotal Jobs: ${v+o}\nTransfers: ${tr}\nOpen Callbacks: ${data.callbacks.filter(c=>!c.done).length}`;
+ goalVsc.value=data.goals.vsc;goalOnsite.value=data.goals.onsite;goalTransfers.value=data.goals.transfers}
+function delJob(id){if(confirm('Delete this job?')){data.jobs=data.jobs.filter(j=>j.id!==id);save()}} function delCb(id){if(confirm('Delete this callback?')){data.callbacks=data.callbacks.filter(c=>c.id!==id);save()}} function toggleCb(id){let c=data.callbacks.find(x=>x.id===id);c.done=!c.done;save()}
+function saveGoals(){data.goals={vsc:+goalVsc.value||0,onsite:+goalOnsite.value||0,transfers:+goalTransfers.value||0};save()}
+function resetToday(){if(confirm('Reset today’s jobs and transfers? Callbacks stay saved.')){data.jobs=data.jobs.filter(j=>j.date!==today());data.transfers=data.transfers.filter(t=>t.date!==today());save()}}
+function copySummary(){navigator.clipboard.writeText(reportBox.textContent);alert('Summary copied.')}
+function exportCSV(){let rows=['TYPE,DATE,TIME,CATEGORY,NUMBER/PHONE,CUSTOMER,REASON/NOTES,DONE'];data.jobs.forEach(j=>rows.push(`JOB,${j.date},${j.time},${j.type},"${j.number}","${j.customer}","${j.notes}",`));data.transfers.forEach(t=>rows.push(`TRANSFER,${t.date},${t.time},TRANSFER,,,,`));data.callbacks.forEach(c=>rows.push(`CALLBACK,${c.date},${c.time},CALLBACK,"${c.phone}","${c.name}","${c.reason} ${c.notes}",${c.done}`));let blob=new Blob([rows.join('\n')],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='work-dashboard-export.csv';a.click()}
+render();
+</script>
+</body>
+</html>
