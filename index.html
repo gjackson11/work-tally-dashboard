@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Tally Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #14213d;
+      --muted: #6b7280;
+      --blue: #0057b8;
+      --blue2: #0a7cff;
+      --green: #16a34a;
+      --orange: #f59e0b;
+      --red: #dc2626;
+      --border: #d8e1ef;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      background: linear-gradient(135deg, var(--blue), #003d82);
+      color: white;
+      padding: 22px 18px;
+      box-shadow: var(--shadow);
+    }
+    header h1 { margin: 0; font-size: 25px; }
+    header p { margin: 6px 0 0; opacity: .9; }
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    nav button, .btn {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--ink);
+      padding: 10px 13px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    nav button.active, .btn.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 18px; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .metric .label { color: var(--muted); font-size: 14px; font-weight: 700; }
+    .metric .num { font-size: 40px; font-weight: 900; margin-top: 6px; }
+    .metric .goal { color: var(--muted); font-size: 13px; }
+    .bar { height: 9px; border-radius: 999px; background: #e8eef8; overflow: hidden; margin-top: 10px; }
+    .bar span { display: block; height: 100%; background: var(--blue2); width: 0%; }
+    h2 { margin: 8px 0 14px; }
+    h3 { margin: 0 0 12px; }
+    label { display: block; font-weight: 700; margin: 10px 0 5px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      background: white;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row .btn { margin-top: 10px; }
+    .danger { background: var(--red) !important; color: white !important; border-color: var(--red) !important; }
+    .success { background: var(--green) !important; color: white !important; border-color: var(--green) !important; }
+    .warn { background: var(--orange) !important; color: white !important; border-color: var(--orange) !important; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 900; }
+    .pill.vsc { background: #dbeafe; color: #1d4ed8; }
+    .pill.onsite { background: #dcfce7; color: #15803d; }
+    .pill.transfer { background: #fef3c7; color: #92400e; }
+    .pill.due { background: #fef3c7; color: #92400e; }
+    .pill.overdue { background: #fee2e2; color: #b91c1c; }
+    .pill.done { background: #dcfce7; color: #15803d; }
+    .muted { color: var(--muted); }
+    .right { margin-left: auto; }
+    .quick button { min-width: 145px; min-height: 48px; }
+    .mini { font-size: 12px; color: var(--muted); }
+    .empty { padding: 18px; text-align: center; color: var(--muted); }
+    @media (max-width: 850px) { .grid, .grid2 { grid-template-columns: 1fr; } .metric .num { font-size: 34px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Work Tally Dashboard</h1>
+    <p>VSC jobs • ONSITE jobs • Transfers • Callbacks • Reports</p>
+  </header>
+  <nav>
+    <button class="active" data-tab="dashboard">Dashboard</button>
+    <button data-tab="jobs">Jobs</button>
+    <button data-tab="callbacks">Callbacks</button>
+    <button data-tab="reports">Reports</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+
+  <main class="wrap">
+    <section id="dashboard" class="tab active">
+      <h2>Today</h2>
+      <div class="grid">
+        <div class="card metric"><div class="label">VSC Jobs</div><div id="mVsc" class="num">0</div><div class="goal">Goal: <span id="gVscTxt">0</span></div><div class="bar"><span id="bVsc"></span></div></div>
+        <div class="card metric"><div class="label">ONSITE Jobs</div><div id="mOnsite" class="num">0</div><div class="goal">Goal: <span id="gOnsiteTxt">0</span></div><div class="bar"><span id="bOnsite"></span></div></div>
+        <div class="card metric"><div class="label">Transfers</div><div id="mTransfers" class="num">0</div><div class="goal">Goal: <span id="gTransferTxt">0</span></div><div class="bar"><span id="bTransfer"></span></div></div>
+        <div class="card metric"><div class="label">Callbacks Due</div><div id="mCallbacks" class="num">0</div><div class="goal">Pending or overdue</div></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Quick Add</h3>
+        <div class="row quick">
+          <button class="btn primary" onclick="showTab('jobs'); document.getElementById('jobType').value='VSC'; document.getElementById('jobNumber').focus();">+ VSC Job</button>
+          <button class="btn primary" onclick="showTab('jobs'); document.getElementById('jobType').value='ONSITE'; document.getElementById('jobNumber').focus();">+ ONSITE Job</button>
+          <button class="btn warn" onclick="addTransfer()">+ Transfer</button>
+          <button class="btn success" onclick="showTab('callbacks'); document.getElementById('cbName').focus();">+ Callback</button>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:14px;">
+        <div class="card"><h3>Callbacks Due / Overdue</h3><div id="dueCallbacks"></div></div>
+        <div class="card"><h3>Today's Activity</h3><div id="timeline"></div></div>
+      </div>
+    </section>
+
+    <section id="jobs" class="tab">
+      <h2>Jobs</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Add Job</h3>
+          <label>Job Type</label>
+          <select id="jobType"><option>VSC</option><option>ONSITE</option></select>
+          <label>Job Number</label>
+          <input id="jobNumber" placeholder="Paste or type job number" />
+          <label>Customer Name (optional)</label>
+          <input id="jobCustomer" placeholder="Customer name" />
+          <label>Notes (optional)</label>
+          <textarea id="jobNotes" placeholder="Any quick notes"></textarea>
+          <button class="btn primary" onclick="addJob()">Save Job</button>
+        </div>
+        <div class="card">
+          <h3>Search Jobs</h3>
+          <input id="jobSearch" oninput="render()" placeholder="Search job number, customer, notes..." />
+          <p class="mini">Tip: Every job is timestamped automatically.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;"><h3>Job Log</h3><div id="jobTable"></div></div>
+    </section>
+
+    <section id="callbacks" class="tab">
+      <h2>Callbacks</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Add Callback</h3>
+          <label>Customer Name</label><input id="cbName" placeholder="Customer name" />
+          <label>Phone Number</label><input id="cbPhone" placeholder="Customer phone number" />
+          <label>Callback Date</label><input id="cbDate" type="date" />
+          <label>Callback Time</label><input id="cbTime" type="time" />
+          <label>Reason</label><input id="cbReason" placeholder="Reason for callback" />
+          <label>Notes</label><textarea id="cbNotes" placeholder="Details to remember"></textarea>
+          <button class="btn primary" onclick="addCallback()">Save Callback</button>
+        </div>
+        <div class="card">
+          <h3>Search Callbacks</h3>
+          <input id="cbSearch" oninput="render()" placeholder="Search name, phone, reason, notes..." />
+          <p class="mini">Overdue callbacks are marked red automatically.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;"><h3>Callback List</h3><div id="callbackTable"></div></div>
+    </section>
+
+    <section id="reports" class="tab">
+      <h2>Reports</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Export</h3>
+          <button class="btn primary" onclick="exportCSV('today')">Export Today's CSV</button>
+          <button class="btn" onclick="exportCSV('all')">Export All CSV</button>
+          <button class="btn" onclick="downloadBackup()">Download Backup</button>
+        </div>
+        <div class="card">
+          <h3>Summary</h3>
+          <div id="reportSummary"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="settings" class="tab">
+      <h2>Settings</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Daily Goals</h3>
+          <label>VSC Goal</label><input id="goalVsc" type="number" min="0" />
+          <label>ONSITE Goal</label><input id="goalOnsite" type="number" min="0" />
+          <label>Transfer Goal</label><input id="goalTransfer" type="number" min="0" />
+          <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+        </div>
+        <div class="card">
+          <h3>Data Controls</h3>
+          <p class="muted">Your data saves only inside this browser on this computer.</p>
+          <button class="btn" onclick="downloadBackup()">Download Backup</button>
+          <label>Restore Backup JSON</label><input type="file" id="restoreFile" accept="application/json" onchange="restoreBackup(event)" />
+          <button class="btn danger" onclick="clearAllData()">Clear All Data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const KEY = 'workTallyDashboard_v1';
+let state = load();
+
+function todayKey(d = new Date()) { return d.toISOString().slice(0,10); }
+function nowTime() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+function nowStamp() { return new Date().toISOString(); }
+function fmtDateTime(iso) { return new Date(iso).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
+function load(){
+  const blank = { jobs: [], transfers: [], callbacks: [], settings: { goalVsc: 20, goalOnsite: 10, goalTransfer: 15 } };
+  try { return JSON.parse(localStorage.getItem(KEY)) || blank; } catch { return blank; }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function escapeHtml(str=''){ return String(str).replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+function isToday(iso){ return iso && iso.slice(0,10) === todayKey(); }
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`nav button[data-tab="${id}"]`).classList.add('active');
+  render();
+}
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+function addJob(){
+  const type = document.getElementById('jobType').value;
+  const number = document.getElementById('jobNumber').value.trim();
+  if(!number){ alert('Enter the job number first.'); return; }
+  state.jobs.unshift({ id: crypto.randomUUID(), type, number, customer: document.getElementById('jobCustomer').value.trim(), notes: document.getElementById('jobNotes').value.trim(), createdAt: nowStamp() });
+  document.getElementById('jobNumber').value=''; document.getElementById('jobCustomer').value=''; document.getElementById('jobNotes').value='';
+  save(); render();
+}
+function addTransfer(){ state.transfers.unshift({ id: crypto.randomUUID(), createdAt: nowStamp() }); save(); render(); }
+function deleteJob(id){ if(confirm('Delete this job?')){ state.jobs = state.jobs.filter(x=>x.id!==id); save(); render(); } }
+function deleteTransfer(id){ if(confirm('Delete this transfer?')){ state.transfers = state.transfers.filter(x=>x.id!==id); save(); render(); } }
+
+function addCallback(){
+  const name = document.getElementById('cbName').value.trim();
+  const phone = document.getElementById('cbPhone').value.trim();
+  const date = document.getElementById('cbDate').value;
+  const time = document.getElementById('cbTime').value;
+  if(!phone || !date || !time){ alert('Phone number, callback date, and callback time are required.'); return; }
+  state.callbacks.unshift({ id: crypto.randomUUID(), name, phone, date, time, reason: document.getElementById('cbReason').value.trim(), notes: document.getElementById('cbNotes').value.trim(), status:'Pending', createdAt: nowStamp(), completedAt:null });
+  ['cbName','cbPhone','cbDate','cbTime','cbReason','cbNotes'].forEach(id=>document.getElementById(id).value='');
+  save(); render();
+}
+function callbackStatus(cb){
+  if(cb.status === 'Completed') return 'done';
+  const due = new Date(`${cb.date}T${cb.time}`);
+  const now = new Date();
+  if(due < now) return 'overdue';
+  if(cb.date === todayKey()) return 'due';
+  return 'pending';
+}
+function completeCallback(id){ const cb = state.callbacks.find(x=>x.id===id); if(cb){ cb.status='Completed'; cb.completedAt=nowStamp(); save(); render(); } }
+function reopenCallback(id){ const cb = state.callbacks.find(x=>x.id===id); if(cb){ cb.status='Pending'; cb.completedAt=null; save(); render(); } }
+function deleteCallback(id){ if(confirm('Delete this callback?')){ state.callbacks = state.callbacks.filter(x=>x.id!==id); save(); render(); } }
+
+function saveSettings(){
+  state.settings.goalVsc = Number(document.getElementById('goalVsc').value || 0);
+  state.settings.goalOnsite = Number(document.getElementById('goalOnsite').value || 0);
+  state.settings.goalTransfer = Number(document.getElementById('goalTransfer').value || 0);
+  save(); render(); alert('Settings saved.');
+}
+function countJobs(type){ return state.jobs.filter(j => j.type === type && isToday(j.createdAt)).length; }
+function todaysTransfers(){ return state.transfers.filter(t => isToday(t.createdAt)).length; }
+function setProgress(id, value, goal){ document.getElementById(id).style.width = Math.min(100, goal ? (value/goal)*100 : 0) + '%'; }
+
+function render(){
+  const vsc = countJobs('VSC'), onsite = countJobs('ONSITE'), transfers = todaysTransfers();
+  const dueCbs = state.callbacks.filter(cb => cb.status !== 'Completed' && ['overdue','due'].includes(callbackStatus(cb))).length;
+  document.getElementById('mVsc').textContent = vsc; document.getElementById('mOnsite').textContent = onsite; document.getElementById('mTransfers').textContent = transfers; document.getElementById('mCallbacks').textContent = dueCbs;
+  document.getElementById('gVscTxt').textContent = state.settings.goalVsc; document.getElementById('gOnsiteTxt').textContent = state.settings.goalOnsite; document.getElementById('gTransferTxt').textContent = state.settings.goalTransfer;
+  setProgress('bVsc', vsc, state.settings.goalVsc); setProgress('bOnsite', onsite, state.settings.goalOnsite); setProgress('bTransfer', transfers, state.settings.goalTransfer);
+  document.getElementById('goalVsc').value = state.settings.goalVsc; document.getElementById('goalOnsite').value = state.settings.goalOnsite; document.getElementById('goalTransfer').value = state.settings.goalTransfer;
+  renderJobs(); renderCallbacks(); renderTimeline(); renderDueCallbacks(); renderReports();
+}
+function renderJobs(){
+  const q = (document.getElementById('jobSearch')?.value || '').toLowerCase();
+  const rows = state.jobs.filter(j => [j.type,j.number,j.customer,j.notes].join(' ').toLowerCase().includes(q));
+  if(!rows.length){ document.getElementById('jobTable').innerHTML = '<div class="empty">No jobs logged yet.</div>'; return; }
+  document.getElementById('jobTable').innerHTML = `<table><thead><tr><th>Time</th><th>Type</th><th>Job #</th><th>Customer</th><th>Notes</th><th></th></tr></thead><tbody>${rows.map(j=>`<tr><td>${fmtDateTime(j.createdAt)}</td><td><span class="pill ${j.type==='VSC'?'vsc':'onsite'}">${j.type}</span></td><td><b>${escapeHtml(j.number)}</b></td><td>${escapeHtml(j.customer)}</td><td>${escapeHtml(j.notes)}</td><td><button class="btn danger" onclick="deleteJob('${j.id}')">Delete</button></td></tr>`).join('')}</tbody></table>`;
+}
+function renderCallbacks(){
+  const q = (document.getElementById('cbSearch')?.value || '').toLowerCase();
+  const rows = state.callbacks.filter(c => [c.name,c.phone,c.reason,c.notes,c.status].join(' ').toLowerCase().includes(q));
+  if(!rows.length){ document.getElementById('callbackTable').innerHTML = '<div class="empty">No callbacks saved yet.</div>'; return; }
+  document.getElementById('callbackTable').innerHTML = `<table><thead><tr><th>Due</th><th>Status</th><th>Customer</th><th>Phone</th><th>Reason / Notes</th><th></th></tr></thead><tbody>${rows.map(c=>{ const st=callbackStatus(c); return `<tr><td>${escapeHtml(c.date)} ${escapeHtml(c.time)}</td><td><span class="pill ${st}">${st.toUpperCase()}</span></td><td>${escapeHtml(c.name)}</td><td><b>${escapeHtml(c.phone)}</b></td><td>${escapeHtml(c.reason)}<br><span class="muted">${escapeHtml(c.notes)}</span></td><td>${c.status==='Completed'?`<button class="btn" onclick="reopenCallback('${c.id}')">Reopen</button>`:`<button class="btn success" onclick="completeCallback('${c.id}')">Complete</button>`} <button class="btn danger" onclick="deleteCallback('${c.id}')">Delete</button></td></tr>`}).join('')}</tbody></table>`;
+}
+function renderTimeline(){
+  const items = [
+    ...state.jobs.filter(j=>isToday(j.createdAt)).map(j=>({time:j.createdAt, text:`${j.type} Job #${j.number}`})),
+    ...state.transfers.filter(t=>isToday(t.createdAt)).map(t=>({time:t.createdAt, text:'Transfer'})),
+    ...state.callbacks.filter(c=>isToday(c.createdAt)).map(c=>({time:c.createdAt, text:`Callback added: ${c.phone}`}))
+  ].sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,12);
+  document.getElementById('timeline').innerHTML = items.length ? items.map(i=>`<p><b>${new Date(i.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</b> — ${escapeHtml(i.text)}</p>`).join('') : '<div class="empty">No activity today yet.</div>';
+}
+function renderDueCallbacks(){
+  const rows = state.callbacks.filter(c => c.status !== 'Completed' && ['overdue','due'].includes(callbackStatus(c))).sort((a,b)=> new Date(`${a.date}T${a.time}`)-new Date(`${b.date}T${b.time}`));
+  document.getElementById('dueCallbacks').innerHTML = rows.length ? rows.map(c=>`<p><span class="pill ${callbackStatus(c)}">${callbackStatus(c).toUpperCase()}</span> <b>${escapeHtml(c.time)}</b> ${escapeHtml(c.name || c.phone)}<br><span class="muted">${escapeHtml(c.reason)}</span></p>`).join('') : '<div class="empty">No callbacks due right now.</div>';
+}
+function renderReports(){
+  document.getElementById('reportSummary').innerHTML = `<p><b>Today</b></p><p>VSC Jobs: ${countJobs('VSC')}</p><p>ONSITE Jobs: ${countJobs('ONSITE')}</p><p>Transfers: ${todaysTransfers()}</p><p>Total Jobs: ${countJobs('VSC') + countJobs('ONSITE')}</p><p>Pending Callbacks: ${state.callbacks.filter(c=>c.status!=='Completed').length}</p>`;
+}
+function csvEscape(v){ return `"${String(v ?? '').replace(/"/g,'""')}"`; }
+function exportCSV(scope){
+  const today = todayKey();
+  const rows = [['Category','Date/Time','Type','Number/Phone','Customer','Reason','Notes','Status']];
+  state.jobs.filter(j=>scope==='all'||isToday(j.createdAt)).forEach(j=>rows.push(['Job',fmtDateTime(j.createdAt),j.type,j.number,j.customer,'',j.notes,'']));
+  state.transfers.filter(t=>scope==='all'||isToday(t.createdAt)).forEach(t=>rows.push(['Transfer',fmtDateTime(t.createdAt),'Transfer','','','','','']));
+  state.callbacks.filter(c=>scope==='all'||c.date===today).forEach(c=>rows.push(['Callback',`${c.date} ${c.time}`,'Callback',c.phone,c.name,c.reason,c.notes,c.status]));
+  const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  downloadFile(`work-tally-${scope}-${today}.csv`, csv, 'text/csv');
+}
+function downloadBackup(){ downloadFile(`work-tally-backup-${todayKey()}.json`, JSON.stringify(state,null,2), 'application/json'); }
+function restoreBackup(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { try { state = JSON.parse(reader.result); save(); render(); alert('Backup restored.'); } catch { alert('That backup file could not be read.'); } };
+  reader.readAsText(file);
+}
+function downloadFile(name, content, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+function clearAllData(){ if(confirm('This deletes all jobs, transfers, callbacks, and settings from this browser. Continue?')){ localStorage.removeItem(KEY); state = load(); render(); } }
+
+render();
+</script>
+</body>
+</html>
